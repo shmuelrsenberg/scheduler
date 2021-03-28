@@ -1,13 +1,10 @@
 package com.company;
 
-import java.sql.Time;
-import java.util.Date;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.PriorityQueue;
 
 class Job
 {
@@ -57,23 +54,16 @@ public class Scheduler {
             while(!exitScheduler) {
                 Job job = null;
 
-
-
                 if (executor != null) {
                     synchronized (queue) {
                         if (queue != null && !queue.isEmpty()) {
                             job = queue.remove();
-                            if (!job.recurring) {
-                                if (jobCounter < jobLimit) {
-                                    ++jobCounter;
-                                } else {
-                                    queue.add(job);
-                                    job = null;
-                                }
+                            if (jobCounter < jobLimit) {
+                                ++jobCounter;
+                            } else {
+                                queue.add(job);
+                                job = null;
                             }
-
-
-
                         }
                     }
 
@@ -83,20 +73,13 @@ public class Scheduler {
                                 job.recurring);
                     }
 
-                    try {
-                        executor.awaitTermination(500, TimeUnit.MILLISECONDS);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-
                     if (job != null) {
                         if (job.recurring) {
                             synchronized(queue) {
                                 queue.add(job);
                             }
-                        } else {
-                            --jobCounter;
                         }
+                        --jobCounter;
                     }
                 }
             }
@@ -107,12 +90,18 @@ public class Scheduler {
         }
     }
 
+    static class JobComparator implements Comparator<Job> {
+
+        public int compare(Job j1, Job j2) {
+            return (!j1.recurring && !j2.recurring) ? 0 : (j1.recurring) ? 1 : -1;
+        }
+    }
 
     private static ScheduledExecutorService executor = null;
     private static  int poolLimit=2;
     private static  int jobLimit = 2;
     private static  int jobCounter = 0;
-    private static  Queue<Job> queue = new LinkedList<>();
+    private static  PriorityQueue<Job> queue = new PriorityQueue<Job>(5, new JobComparator());
     private static  boolean exitScheduler = false;
     private static ProcessThread processThread = null;
 
@@ -155,10 +144,10 @@ public class Scheduler {
 
         processJob("one", 2, true, "Type1");
         processJob("two", 2, true, "Type1");
-        processJob("three", 2, false, "Type1");
-        processJob("four", 2, false, "Type1");
+        processJob("three", 1, false, "Type1");
+        processJob("four", 3, false, "Type1");
 
-        Thread.sleep(5000);
+        Thread.sleep(1000);
 
         System.out.println("Status: " + getProcessThreadStatus());
 
